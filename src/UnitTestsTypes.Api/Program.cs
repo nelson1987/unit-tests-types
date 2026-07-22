@@ -19,6 +19,7 @@ if (!app.Environment.IsEnvironment("Testing"))
     app.UseHttpsRedirection();
 }
 
+app.UseApiExceptionHandler();
 app.MapControllers();
 app.Run();
 

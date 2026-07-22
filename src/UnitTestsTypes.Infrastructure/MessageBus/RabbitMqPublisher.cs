@@ -9,19 +9,21 @@ namespace UnitTestsTypes.Infrastructure.MessageBus;
 public class RabbitMqPublisher : IMessagePublisher
 {
     private readonly string _hostName;
+    private readonly int _port;
     private readonly string _userName;
     private readonly string _password;
 
     public RabbitMqPublisher(IConfiguration configuration)
     {
         _hostName = configuration["RabbitMq:HostName"] ?? "localhost";
+        _port = int.TryParse(configuration["RabbitMq:Port"], out var port) ? port : 5672;
         _userName = configuration["RabbitMq:UserName"] ?? "guest";
         _password = configuration["RabbitMq:Password"] ?? "guest";
     }
 
     public Task PublishAsync(string topic, object payload, CancellationToken cancellationToken)
     {
-        var factory = new ConnectionFactory { HostName = _hostName, UserName = _userName, Password = _password };
+        var factory = new ConnectionFactory { HostName = _hostName, Port = _port, UserName = _userName, Password = _password };
         using var connection = factory.CreateConnection();
         using var channel = connection.CreateModel();
 

@@ -1,4 +1,7 @@
+using System.Data;
+using Dapper;
 using DotNet.Testcontainers.Containers;
+using Npgsql;
 using Testcontainers.PostgreSql;
 using Testcontainers.RabbitMq;
 
@@ -15,6 +18,8 @@ public sealed class ContainerFixture : IAsyncLifetime
 
     private readonly RabbitMqContainer _rabbitMq = new RabbitMqBuilder()
         .WithImage("rabbitmq:3-management")
+        .WithUsername("guest")
+        .WithPassword("guest")
         .Build();
 
     public string ConnectionString => _postgres.GetConnectionString();
@@ -25,6 +30,18 @@ public sealed class ContainerFixture : IAsyncLifetime
     {
         await _postgres.StartAsync();
         await _rabbitMq.StartAsync();
+
+        await using var connection = new NpgsqlConnection(_postgres.GetConnectionString());
+        await connection.OpenAsync();
+        await connection.ExecuteAsync(@"
+            CREATE TABLE IF NOT EXISTS customers (
+                id UUID PRIMARY KEY,
+                name VARCHAR(150) NOT NULL,
+                email VARCHAR(150) NOT NULL,
+                document VARCHAR(50) NOT NULL,
+                created_at TIMESTAMP NOT NULL
+            );
+        ");
     }
 
     public async Task DisposeAsync()

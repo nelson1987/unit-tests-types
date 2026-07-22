@@ -22,7 +22,9 @@ public class CustomersApiTests : IClassFixture<ContainerFixture>, IClassFixture<
                 {
                     ["ConnectionStrings:Postgres"] = _containerFixture.ConnectionString,
                     ["RabbitMq:HostName"] = _containerFixture.RabbitHost,
-                    ["RabbitMq:Port"] = _containerFixture.RabbitPort.ToString()
+                    ["RabbitMq:Port"] = _containerFixture.RabbitPort.ToString(),
+                    ["RabbitMq:UserName"] = "guest",
+                    ["RabbitMq:Password"] = "guest"
                 });
             });
         }).CreateClient();

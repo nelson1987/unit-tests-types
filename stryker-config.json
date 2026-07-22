@@ -1,0 +1,13 @@
+{
+  "stryker-config": {
+    "solution": "UnitTestsTypes.sln",
+    "project": "src/UnitTestsTypes.Application/UnitTestsTypes.Application.csproj",
+    "mutate": ["src/UnitTestsTypes.Application/**/*.cs"],
+    "reporters": ["html", "progress", "cleartext"],
+    "thresholds": {
+      "high": 80,
+      "low": 80,
+      "break": 80
+    }
+  }
+}

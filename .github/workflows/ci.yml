@@ -63,4 +63,4 @@ jobs:
         run: dotnet tool install --global dotnet-format
 
       - name: Check formatting
-        run: dotnet-format --verify-no-changes --folder .
+        run: dotnet format UnitTestsTypes.sln --verify-no-changes

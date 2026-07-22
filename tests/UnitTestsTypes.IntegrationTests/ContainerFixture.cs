@@ -34,7 +34,8 @@ public sealed class ContainerFixture : IAsyncLifetime
         await using var connection = new NpgsqlConnection(_postgres.GetConnectionString());
         await connection.OpenAsync();
         await connection.ExecuteAsync(@"
-            CREATE TABLE IF NOT EXISTS customers (
+            CREATE SCHEMA IF NOT EXISTS public;
+            CREATE TABLE IF NOT EXISTS public.customers (
                 id UUID PRIMARY KEY,
                 name VARCHAR(150) NOT NULL,
                 email VARCHAR(150) NOT NULL,

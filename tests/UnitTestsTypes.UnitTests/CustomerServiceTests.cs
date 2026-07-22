@@ -1,3 +1,5 @@
+using NSubstitute;
+using Shouldly;
 using UnitTestsTypes.Application.Abstractions;
 using UnitTestsTypes.Application.Services;
 using UnitTestsTypes.Domain.Entities;
@@ -10,33 +12,29 @@ public class CustomerServiceTests
     [Fact]
     public async Task CreateAsync_ShouldPopulateIdAndCreatedAt()
     {
-        var repository = new FakeCustomerRepository();
-        var service = new CustomerService(repository, new FakePublisher());
+        var repository = Substitute.For<ICustomerRepository>();
+        var publisher = Substitute.For<IMessagePublisher>();
+        repository.AddAsync(Arg.Any<Customer>(), Arg.Any<CancellationToken>())
+            .Returns(callInfo => Task.FromResult(callInfo.Arg<Customer>().Id));
+
+        var service = new CustomerService(repository, publisher);
 
         var result = await service.CreateAsync(new Customer { Name = "Ana", Email = "ana@email.com", Document = "123" }, CancellationToken.None);
 
-        Assert.NotEqual(Guid.Empty, result.Id);
-        Assert.True(result.CreatedAt > DateTime.MinValue);
+        result.Id.ShouldNotBe(Guid.Empty);
+        result.CreatedAt.ShouldBeGreaterThan(DateTime.MinValue);
+
+        await repository.Received(1).AddAsync(Arg.Is<Customer>(customer => customer.Name == "Ana" && customer.Id != Guid.Empty), Arg.Any<CancellationToken>());
+        await publisher.Received(1).PublishAsync("customers", Arg.Is<Customer>(customer => customer.Id == result.Id), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task CreateAsync_ShouldThrow_WhenNameIsMissing()
     {
-        var repository = new FakeCustomerRepository();
-        var service = new CustomerService(repository, new FakePublisher());
+        var repository = Substitute.For<ICustomerRepository>();
+        var publisher = Substitute.For<IMessagePublisher>();
+        var service = new CustomerService(repository, publisher);
 
-        await Assert.ThrowsAsync<ArgumentException>(() => service.CreateAsync(new Customer { Email = "ana@email.com", Document = "123" }, CancellationToken.None));
-    }
-
-    private sealed class FakeCustomerRepository : ICustomerRepository
-    {
-        public Task<Customer?> GetByIdAsync(Guid id, CancellationToken cancellationToken) => Task.FromResult<Customer?>(null);
-        public Task<IReadOnlyList<Customer>> GetAllAsync(CancellationToken cancellationToken) => Task.FromResult<IReadOnlyList<Customer>>(Array.Empty<Customer>());
-        public Task<Guid> AddAsync(Customer customer, CancellationToken cancellationToken) => Task.FromResult(customer.Id);
-    }
-
-    private sealed class FakePublisher : IMessagePublisher
-    {
-        public Task PublishAsync(string topic, object payload, CancellationToken cancellationToken) => Task.CompletedTask;
+        await Should.ThrowAsync<ArgumentException>(() => service.CreateAsync(new Customer { Email = "ana@email.com", Document = "123" }, CancellationToken.None));
     }
 }

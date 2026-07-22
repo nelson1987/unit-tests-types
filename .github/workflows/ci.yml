@@ -11,6 +11,7 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 90
 
     services:
       postgres:
@@ -53,14 +54,63 @@ jobs:
       - name: Build solution
         run: dotnet build UnitTestsTypes.sln --configuration Release --no-restore
 
-      - name: Run unit tests
-        run: dotnet test tests/UnitTestsTypes.UnitTests/UnitTestsTypes.UnitTests.csproj --configuration Release --no-build --verbosity normal
+      - name: Run unit tests with coverage
+        run: dotnet test tests/UnitTestsTypes.UnitTests/UnitTestsTypes.UnitTests.csproj --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults/unit --verbosity normal
 
-      - name: Run integration tests
-        run: dotnet test tests/UnitTestsTypes.IntegrationTests/UnitTestsTypes.IntegrationTests.csproj --configuration Release --no-build --verbosity normal
+      - name: Run integration tests with coverage
+        run: dotnet test tests/UnitTestsTypes.IntegrationTests/UnitTestsTypes.IntegrationTests.csproj --configuration Release --no-build --collect:"XPlat Code Coverage" --results-directory ./TestResults/integration --verbosity normal
+
+      - name: Run persistence benchmarks
+        run: dotnet run --project benchmarks/Benchmarks.Persistence/Benchmarks.Persistence.csproj --configuration Release --no-build
+
+      - name: Start API for performance validation
+        run: |
+          nohup dotnet run --project src/UnitTestsTypes.Api/UnitTestsTypes.Api.csproj --configuration Release --no-build --urls http://127.0.0.1:5000 > /tmp/unit-tests-types-api.log 2>&1 &
+          for i in {1..30}; do
+            if curl -sf http://127.0.0.1:5000/health >/dev/null 2>&1; then
+              echo "API is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "API failed to start"
+          cat /tmp/unit-tests-types-api.log
+          exit 1
+
+      - name: Install k6
+        run: |
+          curl -L https://github.com/grafana/k6/releases/download/v0.54.0/k6-v0.54.0-linux-amd64.tar.gz -o /tmp/k6.tar.gz
+          tar -xzf /tmp/k6.tar.gz -C /tmp
+          sudo install /tmp/k6 /usr/local/bin/k6
+
+      - name: Run k6 performance test
+        run: k6 run --quiet performance/k6/customer-api.js
+
+      - name: Install report generator
+        run: dotnet tool install --global dotnet-reportgenerator-globaltool
+
+      - name: Generate coverage report
+        run: reportgenerator -reports:"TestResults/**/coverage.cobertura.xml" -targetdir:"coveragereport" -reporttypes:"Html;TextSummary"
+
+      - name: Install Stryker
+        run: dotnet tool install --global dotnet-stryker
+
+      - name: Run mutation tests
+        run: dotnet stryker --configFile stryker-config.json --reporter cleartext
 
       - name: Install dotnet-format
         run: dotnet tool install --global dotnet-format
 
       - name: Check formatting
         run: dotnet format UnitTestsTypes.sln --verify-no-changes
+
+      - name: Upload coverage and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: quality-reports
+          path: |
+            coveragereport
+            TestResults
+            BenchmarkDotNet.Artifacts
+            StrykerOutput

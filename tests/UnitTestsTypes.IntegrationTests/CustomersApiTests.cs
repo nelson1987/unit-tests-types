@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Shouldly;
 using UnitTestsTypes.Api.Controllers;
 
 namespace UnitTestsTypes.IntegrationTests;
@@ -34,7 +35,7 @@ public class CustomersApiTests : IClassFixture<ContainerFixture>, IClassFixture<
     public async Task GetAll_ShouldReturnOk()
     {
         var response = await _client.GetAsync("/api/customers");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -42,6 +43,6 @@ public class CustomersApiTests : IClassFixture<ContainerFixture>, IClassFixture<
     {
         var request = new CustomersController.CustomerRequest("Ana", "ana@email.com", "123");
         var response = await _client.PostAsJsonAsync("/api/customers", request);
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.ShouldBe(HttpStatusCode.Created);
     }
 }

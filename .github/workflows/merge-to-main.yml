@@ -104,7 +104,7 @@ jobs:
         run: dotnet tool install --global dotnet-stryker
 
       - name: Run mutation tests
-        run: dotnet stryker --configFile stryker-config.json --reporter cleartext
+        run: dotnet stryker --config-file stryker-config.json --reporter cleartext
 
       - name: Install dotnet-format
         run: dotnet tool install --global dotnet-format

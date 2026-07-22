@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
@@ -24,7 +25,8 @@ public static class ExceptionHandlingExtensions
                     Status = StatusCodes.Status500InternalServerError
                 };
 
-                await context.Response.WriteAsJsonAsync(problem);
+                context.Response.ContentType = "application/problem+json";
+                await context.Response.WriteAsync(JsonSerializer.Serialize(problem));
             });
         });
 

@@ -45,4 +45,22 @@ public class CustomerServiceTests
         result.Error!.Code.ShouldBe("validation_error");
         result.Error.Message.ShouldBe("Name is required");
     }
+
+    [Fact]
+    public async Task CreateAsync_ShouldReturnFailure_WhenNameIsWhitespaceAndNotPersistAnything()
+    {
+        var repository = Substitute.For<ICustomerRepository>();
+        var publisher = Substitute.For<IMessagePublisher>();
+        var service = new CustomerService(repository, publisher);
+
+        var result = await service.CreateAsync(new Customer { Name = "   ", Email = "ana@email.com", Document = "123" }, CancellationToken.None);
+
+        result.IsSuccess.ShouldBeFalse();
+        result.Error.ShouldNotBeNull();
+        result.Error!.Code.ShouldBe("validation_error");
+        result.Error.Message.ShouldBe("Name is required");
+
+        await repository.DidNotReceive().AddAsync(Arg.Any<Customer>(), Arg.Any<CancellationToken>());
+        await publisher.DidNotReceive().PublishAsync(Arg.Any<string>(), Arg.Any<Customer>(), Arg.Any<CancellationToken>());
+    }
 }
